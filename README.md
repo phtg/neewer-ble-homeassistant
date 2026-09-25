@@ -1,6 +1,9 @@
 # Neewer BLE Lights for Home Assistant
 
-[![hacs_badge](https://img.shields.io/badge/HACS-Custom-orange.svg)](https://github.com/hacs/integration)
+[![HACS Custom](https://img.shields.io/badge/HACS-Custom-orange.svg)](https://www.hacs.xyz/)
+[![HACS validation](https://github.com/phtg/neewer-ble-homeassistant/actions/workflows/hacs.yml/badge.svg)](https://github.com/phtg/neewer-ble-homeassistant/actions/workflows/hacs.yml)
+[![Hassfest validation](https://github.com/phtg/neewer-ble-homeassistant/actions/workflows/hassfest.yml/badge.svg)](https://github.com/phtg/neewer-ble-homeassistant/actions/workflows/hassfest.yml)
+[![Tests](https://github.com/phtg/neewer-ble-homeassistant/actions/workflows/tests.yml/badge.svg)](https://github.com/phtg/neewer-ble-homeassistant/actions/workflows/tests.yml)
 
 A Home Assistant custom integration for controlling Neewer LED lights via Bluetooth Low Energy (BLE).
 
@@ -50,6 +53,8 @@ This integration supports Neewer lights that use Bluetooth for control, includin
 7. Search for "Neewer BLE" and install it
 8. Restart Home Assistant
 
+Beta releases are hidden by default. To help test a prerelease, open the Neewer BLE Lights repository in HACS, enable **Show beta versions**, choose the beta version, download it, and restart Home Assistant.
+
 ### Manual Installation
 
 1. Download the `custom_components/neewer_ble` folder from this repository
@@ -68,6 +73,13 @@ If your Neewer light is powered on and in range, Home Assistant should automatic
 2. Click **Add Integration**
 3. Search for "Neewer BLE"
 4. Select your light from the discovered devices, or enter the Bluetooth address manually
+
+### Options
+
+Open **Settings** → **Devices & Services** → **Neewer BLE Lights**, select **Configure**, and adjust:
+
+- **Default brightness** used when turning on without an explicit brightness
+- **Default color temperature** used when turning on without an explicit color temperature
 
 ## Usage
 
@@ -129,17 +141,39 @@ Bluetooth connections can be finicky. Try:
 ### Light Not Responding
 
 Some Neewer lights use different BLE protocols. If your light isn't responding:
-1. Open an issue with your light model
-2. Include the Bluetooth device name (visible in the Neewer app or via a BLE scanner)
+
+1. Disconnect the Neewer mobile or desktop app from the light
+2. Enable debug logging and retry the command
+3. [Open a bug report](https://github.com/phtg/neewer-ble-homeassistant/issues/new?template=bug_report.yml) with the exact model, Bluetooth advertised name, and sanitized logs
+
+### Debug Logging
+
+Add this to `configuration.yaml` and restart Home Assistant:
+
+```yaml
+logger:
+  logs:
+    custom_components.neewer_ble: debug
+```
+
+Reproduce the problem, then open **Settings** → **System** → **Logs**. Remove Bluetooth addresses or other private data before attaching logs to an issue.
+
+## Known Limitations
+
+- The integration controls the light over Bluetooth only; it does not use the light's Wi-Fi connection.
+- Changes made from the Neewer app or another computer are not reflected in Home Assistant. Brightness and color state in Home Assistant are optimistic and represent the most recent command Home Assistant sent.
+- A Bluetooth light generally accepts one active controller. Disconnect the Neewer app before using Home Assistant.
+- Devices in the beta list need confirmation from owners with physical hardware.
+
+## Removal
+
+1. Open **Settings** → **Devices & Services** → **Neewer BLE Lights** and delete each configured light.
+2. In HACS, open **Neewer BLE Lights**, choose **Remove**, and restart Home Assistant.
+3. For a manual installation, remove `custom_components/neewer_ble` from the Home Assistant configuration directory and restart.
 
 ## Contributing
 
-Contributions are welcome! If you have a Neewer light that isn't working:
-
-1. Fork this repository
-2. Add your light's model info to `const.py`
-3. Test the integration
-4. Submit a pull request
+Contributions and hardware test results are welcome. Use the [device support and beta feedback form](https://github.com/phtg/neewer-ble-homeassistant/issues/new?template=device_support.yml) for a light that is missing or needs confirmation. See [CONTRIBUTING.md](CONTRIBUTING.md) before submitting code.
 
 ## Protocol Information
 
