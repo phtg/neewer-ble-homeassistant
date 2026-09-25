@@ -3,7 +3,7 @@
   "name": "Neewer BLE Lights",
   "codeowners": ["@phtg"],
   "config_flow": true,
-  "dependencies": [],
+  "dependencies": ["bluetooth"],
   "documentation": "https://github.com/phtg/neewer-ble-homeassistant",
   "integration_type": "device",
   "iot_class": "local_polling",
