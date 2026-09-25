@@ -102,7 +102,7 @@ class NeewerBLELight(LightEntity):
     def hs_color(self) -> tuple[float, float] | None:
         """Return the hue and saturation color value."""
         if self._device.supports_rgb:
-            return (self._device._hue, self._device._saturation)
+            return (self._device.hue, self._device.saturation)
         return None
 
     @property
@@ -124,7 +124,7 @@ class NeewerBLELight(LightEntity):
         brightness_pct = int(brightness / 2.55) if brightness is not None else None
         
         if hs_color is not None and self._device.supports_rgb:
-            # RGB mode
+            # Explicitly setting RGB mode
             hue, saturation = hs_color
             await self._device.set_rgb(
                 hue=int(hue),
@@ -132,11 +132,25 @@ class NeewerBLELight(LightEntity):
                 brightness=brightness_pct,
             )
             self._attr_color_mode = ColorMode.HS
-        else:
-            # CCT mode
+        elif color_temp_kelvin is not None:
+            # Explicitly setting CCT mode
             await self._device.turn_on(
                 brightness=brightness_pct,
                 color_temp_kelvin=color_temp_kelvin,
+            )
+            self._attr_color_mode = ColorMode.COLOR_TEMP
+        elif self._attr_color_mode == ColorMode.HS and self._device.supports_rgb:
+            # A brightness-only update must preserve the current RGB color.
+            await self._device.set_rgb(
+                hue=self._device.hue,
+                saturation=self._device.saturation,
+                brightness=brightness_pct,
+            )
+        else:
+            # Default to CCT mode (or preserve the existing CCT mode).
+            await self._device.turn_on(
+                brightness=brightness_pct,
+                color_temp_kelvin=None,
             )
             self._attr_color_mode = ColorMode.COLOR_TEMP
         

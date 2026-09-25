@@ -9,10 +9,11 @@ A Home Assistant custom integration for controlling Neewer LED lights via Blueto
 This integration supports Neewer lights that use Bluetooth for control, including:
 
 ### Tested
-- **MS150B** - 130W Bi-Color COB Light
+
 - **GL1 Pro** - Key Light
 
 ### Should Work (Untested)
+
 - MS60C - 65W RGB COB Light
 - RGB660 / RGB660 PRO - Panel Lights
 - RGB480 / RGB530 - Panel Lights
@@ -23,6 +24,15 @@ This integration supports Neewer lights that use Bluetooth for control, includin
 - RGB1 - Light Wand
 - TL60 RGB - Tube Light
 
+### Beta - Community Testing Needed
+
+- **MS150B** - `MS150B-*` Bluetooth name variant
+- **PL60C** - RGB Panel Light
+- **AP150C** - RGB Panel Light
+- **RGB168** - RGB Panel Light
+
+These profiles are based on published protocol implementations and manufacturer specifications, but have not yet been tested with physical hardware in this integration.
+
 ## Features
 
 - **Brightness control** (0-100%)
@@ -30,6 +40,7 @@ This integration supports Neewer lights that use Bluetooth for control, includin
 - **RGB color control** (for supported models)
 - **Auto-discovery** via Home Assistant's Bluetooth integration
 - **Manual device entry** for devices not auto-discovered
+- **Optional persistent Bluetooth connection** for faster, more reliable commands
 
 ## Requirements
 
@@ -122,6 +133,7 @@ script:
 ### Connection Issues
 
 Bluetooth connections can be finicky. Try:
+
 - Restarting the light
 - Restarting Home Assistant
 - Using an ESPHome Bluetooth Proxy for better range/reliability
@@ -129,6 +141,7 @@ Bluetooth connections can be finicky. Try:
 ### Light Not Responding
 
 Some Neewer lights use different BLE protocols. If your light isn't responding:
+
 1. Open an issue with your light model
 2. Include the Bluetooth device name (visible in the Neewer app or via a BLE scanner)
 
@@ -144,6 +157,7 @@ Contributions are welcome! If you have a Neewer light that isn't working:
 ## Protocol Information
 
 This integration is based on the reverse-engineered Neewer BLE protocol from:
+
 - [NeewerLite](https://github.com/keefo/NeewerLite) (macOS)
 - [NeewerLite-Python](https://github.com/taburineagle/NeewerLite-Python) (Cross-platform)
 

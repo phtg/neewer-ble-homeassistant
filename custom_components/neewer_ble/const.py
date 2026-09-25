@@ -29,8 +29,32 @@ CMD_GET_CHANNEL_STATUS = [0x78, 0x84, 0x00, 0xFC]  # Response type 1: current ch
 
 SUPPORTED_MODELS = {
     # MS Series (COB lights) - Infinity protocol
+    "MS150B": {
+        "name": "MS150B",
+        "rgb": False,
+        "cct_range": (2700, 6500),
+        "cct_only": False,
+        "light_type": 1,
+    },
     "20220035": {"name": "MS150B", "rgb": False, "cct_range": (2700, 6500), "cct_only": False, "light_type": 1},
     "20230080": {"name": "MS60C", "rgb": True, "cct_range": (2700, 6500), "cct_only": False, "light_type": 1},
+
+    # Infinity RGB panels - community hardware testing needed
+    "20220016": {
+        "name": "PL60C",
+        "rgb": True,
+        "cct_range": (2500, 10000),
+        "cct_only": False,
+        "light_type": 1,
+    },
+    "PL60C": {"name": "PL60C", "rgb": True, "cct_range": (2500, 10000), "cct_only": False, "light_type": 1},
+    "AP150C": {
+        "name": "AP150C",
+        "rgb": True,
+        "cct_range": (2500, 10000),
+        "cct_only": False,
+        "light_type": 1,
+    },
 
     # RGB Panel lights - Standard protocol (type 0)
     "RGB660PRO": {"name": "RGB660 PRO", "rgb": True, "cct_range": (3200, 5600), "cct_only": False, "light_type": 0},
@@ -40,6 +64,15 @@ SUPPORTED_MODELS = {
     "RGB530PRO": {"name": "RGB530 PRO", "rgb": True, "cct_range": (3200, 5600), "cct_only": False, "light_type": 0},
     "RGB176": {"name": "RGB176", "rgb": True, "cct_range": (3200, 5600), "cct_only": False, "light_type": 0},
     "RGB960": {"name": "RGB960", "rgb": True, "cct_range": (3200, 5600), "cct_only": False, "light_type": 0},
+
+    # Extended legacy protocol (CCT includes a green-magenta byte)
+    "RGB168": {
+        "name": "RGB168",
+        "rgb": True,
+        "cct_range": (2500, 8500),
+        "cct_only": False,
+        "light_type": 2,
+    },
 
     # SL/SNL Series (Bi-color panels) - CCT-only lights use separate commands
     "SL80": {"name": "SL-80", "rgb": False, "cct_range": (3200, 8500), "cct_only": True, "light_type": 0},
@@ -80,6 +113,7 @@ DEFAULT_COLOR_TEMP = 3200
 # Options flow config keys
 CONF_DEFAULT_BRIGHTNESS = "default_brightness"
 CONF_DEFAULT_COLOR_TEMP = "default_color_temp"
+CONF_KEEP_CONNECTED = "keep_connected"
 
 # Color temperature conversion
 # Neewer uses a 0-100 scale internally for color temp

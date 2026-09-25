@@ -52,6 +52,7 @@ class NeewerLightDevice:
         model_info: dict | None = None,
         default_brightness: int = 100,
         default_color_temp: int = 3200,
+        keep_connected: bool = False,
     ) -> None:
         """Initialize the Neewer light device."""
         self._ble_device = ble_device
@@ -70,6 +71,7 @@ class NeewerLightDevice:
         # Default values (configurable via options)
         self._default_brightness = default_brightness
         self._default_color_temp = default_color_temp
+        self._keep_connected = keep_connected
 
         # State - initialize to defaults
         self._is_on = False
@@ -99,13 +101,23 @@ class NeewerLightDevice:
         # Remove common prefixes for matching
         name_clean = name.replace("NEEWER-", "").replace("NEEWER", "").replace("-", "").replace(" ", "")
 
-        # Check for model code in name
+        # Prefer the most specific matching model code. This prevents names such
+        # as RGB168 from being incorrectly detected as the shorter RGB1 model.
+        matches = []
         for code, info in SUPPORTED_MODELS.items():
             code_clean = code.upper().replace("-", "").replace(" ", "")
-            if code_clean in name_clean or name_clean in code_clean:
-                _LOGGER.debug("Detected model: %s (light_type=%d, cct_only=%s)",
-                              info["name"], info.get("light_type", 0), info.get("cct_only", False))
-                return info
+            if code_clean in name_clean:
+                matches.append((len(code_clean), info))
+
+        if matches:
+            _, info = max(matches, key=lambda match: match[0])
+            _LOGGER.debug(
+                "Detected model: %s (light_type=%d, cct_only=%s)",
+                info["name"],
+                info.get("light_type", 0),
+                info.get("cct_only", False),
+            )
+            return info
 
         # Default to generic standard protocol light
         _LOGGER.debug("Unknown model, using defaults for: %s", self._name)
@@ -171,6 +183,16 @@ class NeewerLightDevice:
     def brightness(self) -> int:
         """Return brightness (0-100)."""
         return self._brightness
+
+    @property
+    def hue(self) -> int:
+        """Return hue (0-360)."""
+        return self._hue
+
+    @property
+    def saturation(self) -> int:
+        """Return saturation (0-100)."""
+        return self._saturation
 
     @property
     def color_temp_kelvin(self) -> int:
@@ -351,7 +373,7 @@ class NeewerLightDevice:
             return False
         finally:
             # Always disconnect on error, or if not keeping connected
-            if not success or not keep_connected:
+            if not success or not (keep_connected or self._keep_connected):
                 await self.disconnect()
 
     def _build_cct_command(self, brightness: int, color_temp: int) -> list[int]:
@@ -612,6 +634,7 @@ class NeewerLightDevice:
         if not await self.connect():
             return None
 
+        success = False
         try:
             # Clear any previous notification data
             self._notify_data = None
@@ -635,6 +658,7 @@ class NeewerLightDevice:
             # Wait for notification response
             try:
                 await asyncio.wait_for(self._notify_event.wait(), timeout=timeout)
+                success = True
                 return self._notify_data
             except asyncio.TimeoutError:
                 _LOGGER.debug("Timeout waiting for response from %s", self._name)
@@ -651,7 +675,8 @@ class NeewerLightDevice:
             self._connected = False
             return None
         finally:
-            await self.disconnect()
+            if not success or not self._keep_connected:
+                await self.disconnect()
 
     async def async_get_power_status(self) -> bool | None:
         """Query the device power status.
@@ -737,15 +762,22 @@ class NeewerLightDevice:
         """Return True if the last poll was successful."""
         return self._last_poll_success
 
-    def set_defaults(self, brightness: int, color_temp_kelvin: int) -> None:
+    def set_defaults(
+        self,
+        brightness: int,
+        color_temp_kelvin: int,
+        keep_connected: bool = False,
+    ) -> None:
         """Update default values (called when options change)."""
         self._default_brightness = brightness
         self._default_color_temp = color_temp_kelvin
+        self._keep_connected = keep_connected
         _LOGGER.debug(
-            "Updated defaults for %s: brightness=%d, color_temp=%dK",
+            "Updated defaults for %s: brightness=%d, color_temp=%dK, keep_connected=%s",
             self._name,
             brightness,
             color_temp_kelvin,
+            keep_connected,
         )
 
 

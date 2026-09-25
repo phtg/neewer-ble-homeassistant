@@ -114,5 +114,88 @@ class GL1ProProtocolTest(unittest.IsolatedAsyncioTestCase):
         self.device._send_command.assert_awaited_once_with([0x78, 0x81, 0x01, 0x02, 0xFC])
 
 
+class BetaDeviceProfileTest(unittest.IsolatedAsyncioTestCase):
+    async def test_detects_ms150b_product_name(self) -> None:
+        device = NeewerLightDevice(FakeBLEDevice("MS150B-9A785C"))
+
+        self.assertEqual(device.model_name, "MS150B")
+        self.assertEqual(device.color_temp_range, (2700, 6500))
+        self.assertTrue(device.uses_infinity_protocol)
+
+    async def test_detects_pl60c_product_code(self) -> None:
+        device = NeewerLightDevice(FakeBLEDevice("NW-20220016&776A0500"))
+
+        self.assertEqual(device.model_name, "PL60C")
+        self.assertEqual(device.color_temp_range, (2500, 10000))
+        self.assertTrue(device.supports_rgb)
+        self.assertTrue(device.uses_infinity_protocol)
+
+    async def test_detects_ap150c_name(self) -> None:
+        device = NeewerLightDevice(FakeBLEDevice("NEEWER-AP150C-2"))
+
+        self.assertEqual(device.model_name, "AP150C")
+        self.assertEqual(device.color_temp_range, (2500, 10000))
+        self.assertTrue(device.supports_rgb)
+        self.assertTrue(device.uses_infinity_protocol)
+
+    async def test_rgb168_does_not_fall_back_to_rgb1(self) -> None:
+        device = NeewerLightDevice(FakeBLEDevice("NEEWER-RGB168"))
+
+        self.assertEqual(device.model_name, "RGB168")
+        self.assertEqual(device.light_type, 2)
+        self.assertEqual(device.color_temp_range, (2500, 8500))
+        self.assertEqual(
+            device._build_cct_command(50, 0),
+            [0x78, 0x87, 0x03, 50, 25, 50, 0x7F],
+        )
+
+
+class ConnectionBehaviorTest(unittest.IsolatedAsyncioTestCase):
+    async def test_persistent_connection_stays_open_after_command(self) -> None:
+        device = NeewerLightDevice(
+            FakeBLEDevice("NEEWER-RGB660"), keep_connected=True
+        )
+        device.connect = AsyncMock(return_value=True)
+        device.disconnect = AsyncMock()
+        device._client = type(
+            "FakeClient", (), {"write_gatt_char": AsyncMock()}
+        )()
+
+        result = await device._send_command([0x78, 0x81, 0x01, 0x01, 0xFB])
+
+        self.assertTrue(result)
+        device.disconnect.assert_not_awaited()
+
+    async def test_default_connection_disconnects_after_command(self) -> None:
+        device = NeewerLightDevice(FakeBLEDevice("NEEWER-RGB660"))
+        device.connect = AsyncMock(return_value=True)
+        device.disconnect = AsyncMock()
+        device._client = type(
+            "FakeClient", (), {"write_gatt_char": AsyncMock()}
+        )()
+
+        result = await device._send_command([0x78, 0x81, 0x01, 0x01, 0xFB])
+
+        self.assertTrue(result)
+        device.disconnect.assert_awaited_once()
+
+    async def test_persistent_connection_disconnects_after_failed_command(self) -> None:
+        device = NeewerLightDevice(
+            FakeBLEDevice("NEEWER-RGB660"), keep_connected=True
+        )
+        device.connect = AsyncMock(return_value=True)
+        device.disconnect = AsyncMock()
+        device._client = type(
+            "FakeClient",
+            (),
+            {"write_gatt_char": AsyncMock(side_effect=RuntimeError("write failed"))},
+        )()
+
+        result = await device._send_command([0x78, 0x81, 0x01, 0x01, 0xFB])
+
+        self.assertFalse(result)
+        device.disconnect.assert_awaited_once()
+
+
 if __name__ == "__main__":
     unittest.main()
