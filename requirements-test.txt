@@ -1,2 +1,3 @@
-pytest-homeassistant-custom-component==0.13.366
+aiousbwatcher==1.1.2
 pyserial==3.5
+pytest-homeassistant-custom-component==0.13.366
