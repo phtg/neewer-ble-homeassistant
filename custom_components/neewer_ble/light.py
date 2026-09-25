@@ -11,14 +11,14 @@ from homeassistant.components.light import (
     ATTR_HS_COLOR,
     ColorMode,
     LightEntity,
-    LightEntityFeature,
 )
-from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import CONF_ADDRESS, CONF_NAME
 from homeassistant.core import HomeAssistant
+from homeassistant.exceptions import HomeAssistantError
 from homeassistant.helpers.device_registry import DeviceInfo
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
+from . import NeewerBLEConfigEntry
 from .const import DOMAIN
 from .neewer_device import NeewerLightDevice
 
@@ -27,13 +27,13 @@ _LOGGER = logging.getLogger(__name__)
 
 async def async_setup_entry(
     hass: HomeAssistant,
-    entry: ConfigEntry,
+    entry: NeewerBLEConfigEntry,
     async_add_entities: AddEntitiesCallback,
 ) -> None:
     """Set up Neewer BLE light from a config entry."""
     _LOGGER.debug("Setting up light entity for entry: %s", entry.entry_id)
 
-    device: NeewerLightDevice = hass.data[DOMAIN][entry.entry_id]
+    device = entry.runtime_data
 
     _LOGGER.debug(
         "Creating light entity - Name: %s, Model: %s, RGB: %s, Infinity: %s",
@@ -51,16 +51,19 @@ class NeewerBLELight(LightEntity):
 
     _attr_has_entity_name = True
     _attr_name = None  # Use device name
-    _attr_should_poll = False  # No polling - we use brightness=0 for "off" so power status is unreliable
+    _attr_should_poll = False
+    _attr_assumed_state = True
 
-    def __init__(self, device: NeewerLightDevice, entry: ConfigEntry) -> None:
+    def __init__(
+        self, device: NeewerLightDevice, entry: NeewerBLEConfigEntry
+    ) -> None:
         """Initialize the light."""
         self._device = device
         self._entry = entry
-        
+
         # Entity attributes
         self._attr_unique_id = device.address.replace(":", "_").lower()
-        
+
         # Determine supported color modes
         if device.supports_rgb:
             self._attr_supported_color_modes = {ColorMode.COLOR_TEMP, ColorMode.HS}
@@ -68,12 +71,12 @@ class NeewerBLELight(LightEntity):
         else:
             self._attr_supported_color_modes = {ColorMode.COLOR_TEMP}
             self._attr_color_mode = ColorMode.COLOR_TEMP
-        
+
         # Color temperature range
         min_kelvin, max_kelvin = device.color_temp_range
         self._attr_min_color_temp_kelvin = min_kelvin
         self._attr_max_color_temp_kelvin = max_kelvin
-        
+
         # Device info
         self._attr_device_info = DeviceInfo(
             identifiers={(DOMAIN, device.address)},
@@ -107,11 +110,7 @@ class NeewerBLELight(LightEntity):
 
     @property
     def available(self) -> bool:
-        """Return True if entity is available.
-
-        Always returns True since BLE connections are on-demand.
-        Polling helps sync state but doesn't determine availability.
-        """
+        """Return True because Bluetooth connections are made on demand."""
         return True
 
     async def async_turn_on(self, **kwargs: Any) -> None:
@@ -119,56 +118,58 @@ class NeewerBLELight(LightEntity):
         brightness = kwargs.get(ATTR_BRIGHTNESS)
         color_temp_kelvin = kwargs.get(ATTR_COLOR_TEMP_KELVIN)
         hs_color = kwargs.get(ATTR_HS_COLOR)
-        
+
         # Convert HA brightness (0-255) to Neewer (0-100)
         brightness_pct = int(brightness / 2.55) if brightness is not None else None
-        
+        new_color_mode = self._attr_color_mode
+
         if hs_color is not None and self._device.supports_rgb:
             # Explicitly setting RGB mode
             hue, saturation = hs_color
-            await self._device.set_rgb(
+            success = await self._device.set_rgb(
                 hue=int(hue),
                 saturation=int(saturation),
                 brightness=brightness_pct,
             )
-            self._attr_color_mode = ColorMode.HS
+            new_color_mode = ColorMode.HS
         elif color_temp_kelvin is not None:
             # Explicitly setting CCT mode
-            await self._device.turn_on(
+            success = await self._device.turn_on(
                 brightness=brightness_pct,
                 color_temp_kelvin=color_temp_kelvin,
             )
-            self._attr_color_mode = ColorMode.COLOR_TEMP
+            new_color_mode = ColorMode.COLOR_TEMP
         elif self._attr_color_mode == ColorMode.HS and self._device.supports_rgb:
             # A brightness-only update must preserve the current RGB color.
-            await self._device.set_rgb(
+            success = await self._device.set_rgb(
                 hue=self._device.hue,
                 saturation=self._device.saturation,
                 brightness=brightness_pct,
             )
         else:
             # Default to CCT mode (or preserve the existing CCT mode).
-            await self._device.turn_on(
+            success = await self._device.turn_on(
                 brightness=brightness_pct,
                 color_temp_kelvin=None,
             )
-            self._attr_color_mode = ColorMode.COLOR_TEMP
-        
+            new_color_mode = ColorMode.COLOR_TEMP
+
+        if not success:
+            raise HomeAssistantError(
+                translation_domain=DOMAIN,
+                translation_key="command_failed",
+                translation_placeholders={"name": self._device.name},
+            )
+
+        self._attr_color_mode = new_color_mode
         self.async_write_ha_state()
 
     async def async_turn_off(self, **kwargs: Any) -> None:
         """Turn off the light."""
-        await self._device.turn_off()
+        if not await self._device.turn_off():
+            raise HomeAssistantError(
+                translation_domain=DOMAIN,
+                translation_key="command_failed",
+                translation_placeholders={"name": self._device.name},
+            )
         self.async_write_ha_state()
-
-    async def async_will_remove_from_hass(self) -> None:
-        """Handle removal from Home Assistant."""
-        await self._device.disconnect()
-
-    async def async_update(self) -> None:
-        """Fetch new state data for this light.
-
-        This polls the device via BLE to get the actual power state.
-        """
-        _LOGGER.debug("Polling state for %s", self._device.name)
-        await self._device.async_update()

@@ -11,11 +11,11 @@
   ],
   "codeowners": ["@phtg"],
   "config_flow": true,
-  "dependencies": ["bluetooth"],
+  "dependencies": ["bluetooth_adapters"],
   "documentation": "https://github.com/phtg/neewer-ble-homeassistant",
   "integration_type": "device",
-  "iot_class": "local_polling",
+  "iot_class": "assumed_state",
   "issue_tracker": "https://github.com/phtg/neewer-ble-homeassistant/issues",
-  "requirements": ["bleak>=0.21.0", "bleak-retry-connector>=3.0.0"],
-  "version": "0.4.0-beta.1"
+  "requirements": [],
+  "version": "0.4.0-beta.2"
 }

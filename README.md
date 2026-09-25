@@ -47,7 +47,7 @@ These profiles are based on published protocol implementations and manufacturer 
 
 ## Requirements
 
-- Home Assistant 2024.1.0 or newer
+- Home Assistant 2024.5.0 or newer for the v0.4 beta line
 - Bluetooth adapter on your Home Assistant host
 - OR an ESPHome Bluetooth Proxy
 
@@ -177,6 +177,7 @@ Reproduce the problem, then open **Settings** → **System** → **Logs**. Remov
 
 - The integration controls the light over Bluetooth only; it does not use the light's Wi-Fi connection.
 - Changes made from the Neewer app or another computer are not reflected in Home Assistant. Brightness and color state in Home Assistant are optimistic and represent the most recent command Home Assistant sent.
+- Failed Bluetooth commands are reported in Home Assistant and do not update the assumed entity state.
 - A Bluetooth light generally accepts one active controller. Disconnect the Neewer app before using Home Assistant, especially when **Keep Bluetooth connection active** is enabled.
 - Devices in the beta list need confirmation from owners with physical hardware.
 
