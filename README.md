@@ -10,6 +10,7 @@ This integration supports Neewer lights that use Bluetooth for control, includin
 
 ### Tested
 - **MS150B** - 130W Bi-Color COB Light
+- **GL1 Pro** - Key Light
 
 ### Should Work (Untested)
 - MS60C - 65W RGB COB Light
@@ -18,7 +19,6 @@ This integration supports Neewer lights that use Bluetooth for control, includin
 - SL-80 - Bi-Color Panel
 - SNL-660 - Bi-Color Panel
 - GL1 - Key Light
-- GL1 Pro - Key Light
 - CB100C / CB300B - COB Lights
 - RGB1 - Light Wand
 - TL60 RGB - Tube Light
