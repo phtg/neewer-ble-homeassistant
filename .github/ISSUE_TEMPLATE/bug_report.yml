@@ -29,7 +29,7 @@ body:
     attributes:
       label: Versions
       description: Include both the integration version and Home Assistant version.
-      placeholder: Integration 0.4.0-beta.1; Home Assistant 2026.9.0
+      placeholder: Integration 0.4.0-beta.2; Home Assistant 2026.9.0
     validations:
       required: true
   - type: dropdown

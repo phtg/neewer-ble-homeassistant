@@ -3,25 +3,23 @@
 from __future__ import annotations
 
 import asyncio
+from collections.abc import Callable
 import logging
 import platform
 import subprocess
-from typing import Any
 
-from bleak import BleakClient, BleakScanner
+from bleak import BleakClient
 from bleak.backends.device import BLEDevice
 from bleak.exc import BleakError
 from bleak_retry_connector import establish_connection, BleakClientWithServiceCache
 
 from .const import (
-    NEEWER_SERVICE_UUID,
     NEEWER_WRITE_CHARACTERISTIC_UUID,
     NEEWER_NOTIFY_CHARACTERISTIC_UUID,
     CMD_GET_POWER_STATUS,
     CMD_GET_CHANNEL_STATUS,
     SUPPORTED_MODELS,
     MAX_CONNECTION_RETRIES,
-    CONNECTION_RETRY_DELAY,
 )
 
 _LOGGER = logging.getLogger(__name__)
@@ -53,9 +51,11 @@ class NeewerLightDevice:
         default_brightness: int = 100,
         default_color_temp: int = 3200,
         keep_connected: bool = False,
+        ble_device_callback: Callable[[], BLEDevice | None] | None = None,
     ) -> None:
         """Initialize the Neewer light device."""
         self._ble_device = ble_device
+        self._ble_device_callback = ble_device_callback
         self._client: BleakClient | None = None
         self._lock = asyncio.Lock()
 
@@ -312,6 +312,7 @@ class NeewerLightDevice:
                     self._ble_device,
                     self._name,
                     max_attempts=MAX_CONNECTION_RETRIES,
+                    ble_device_callback=self._ble_device_callback,
                 )
                 self._connected = True
                 _LOGGER.info("Connected to %s", self._name)
@@ -369,6 +370,10 @@ class NeewerLightDevice:
             return True
         except BleakError as err:
             _LOGGER.error("Failed to send command: %s", err)
+            self._connected = False
+            return False
+        except Exception:
+            _LOGGER.exception("Unexpected error sending command to %s", self._name)
             self._connected = False
             return False
         finally:
@@ -499,22 +504,33 @@ class NeewerLightDevice:
         saturation: int | None = None,
     ) -> bool:
         """Turn on the light with optional parameters."""
-        self._is_on = True
+        new_brightness = self._brightness
+        new_color_temp = self._color_temp
+        new_hue = self._hue
+        new_saturation = self._saturation
 
         if brightness is not None:
-            self._brightness = max(0, min(100, brightness))
+            new_brightness = max(0, min(100, brightness))
 
         if color_temp_kelvin is not None:
-            self._color_temp = self._kelvin_to_internal(color_temp_kelvin)
+            new_color_temp = self._kelvin_to_internal(color_temp_kelvin)
 
         # For RGB lights with hue/saturation
         if self.supports_rgb and hue is not None:
-            self._hue = max(0, min(360, hue))
+            new_hue = max(0, min(360, hue))
             if saturation is not None:
-                self._saturation = max(0, min(100, saturation))
+                new_saturation = max(0, min(100, saturation))
 
-            cmd = self._build_hsi_command(self._hue, self._saturation, self._brightness)
-            return await self._send_command(cmd)
+            cmd = self._build_hsi_command(
+                new_hue, new_saturation, new_brightness
+            )
+            success = await self._send_command(cmd)
+            if success:
+                self._is_on = True
+                self._brightness = new_brightness
+                self._hue = new_hue
+                self._saturation = new_saturation
+            return success
 
         # CCT mode - per NeewerLite-Python:
         # - cct_only lights (old bi-color) use separate 0x82/0x83 commands
@@ -528,21 +544,27 @@ class NeewerLightDevice:
                         return False
                     await asyncio.sleep(0.05)
 
-                bri_cmd = self._build_brightness_only_command(self._brightness)
+                bri_cmd = self._build_brightness_only_command(new_brightness)
                 if not await self._send_command(bri_cmd, keep_connected=True):
                     return False
                 await asyncio.sleep(0.05)  # Small delay between commands
 
-                temp_cmd = self._build_temp_only_command(self._color_temp)
-                return await self._send_command(temp_cmd)
+                temp_cmd = self._build_temp_only_command(new_color_temp)
+                success = await self._send_command(temp_cmd)
             except Exception as err:
                 _LOGGER.error("Error in multi-command sequence: %s", err)
                 await self.disconnect()  # Ensure cleanup
                 return False
         else:
             # Standard/Infinity lights use combined CCT command
-            cmd = self._build_cct_command(self._brightness, self._color_temp)
-            return await self._send_command(cmd)
+            cmd = self._build_cct_command(new_brightness, new_color_temp)
+            success = await self._send_command(cmd)
+
+        if success:
+            self._is_on = True
+            self._brightness = new_brightness
+            self._color_temp = new_color_temp
+        return success
 
     async def turn_off(self) -> bool:
         """Turn off the light by setting brightness to 0.
@@ -550,8 +572,6 @@ class NeewerLightDevice:
         Using brightness=0 instead of power off command because the power
         command puts some lights into deep sleep with Bluetooth disabled.
         """
-        self._is_on = False
-
         if self.uses_power_commands:
             cmd = self._build_power_command(on=False)
         elif self.is_cct_only:
@@ -561,35 +581,44 @@ class NeewerLightDevice:
             # Standard/Infinity lights use CCT command with brightness=0
             cmd = self._build_cct_command(0, self._color_temp)
 
-        return await self._send_command(cmd)
+        success = await self._send_command(cmd)
+        if success:
+            self._is_on = False
+        return success
 
     async def set_brightness(self, brightness: int) -> bool:
         """Set brightness (0-100)."""
-        self._brightness = max(0, min(100, brightness))
-        self._is_on = brightness > 0
+        new_brightness = max(0, min(100, brightness))
 
         if self.is_cct_only:
             # Old CCT-only lights use separate brightness command
-            cmd = self._build_brightness_only_command(self._brightness)
-            return await self._send_command(cmd)
+            cmd = self._build_brightness_only_command(new_brightness)
         else:
             # Standard/Infinity lights use combined CCT command
-            cmd = self._build_cct_command(self._brightness, self._color_temp)
-            return await self._send_command(cmd)
+            cmd = self._build_cct_command(new_brightness, self._color_temp)
+
+        success = await self._send_command(cmd)
+        if success:
+            self._brightness = new_brightness
+            self._is_on = new_brightness > 0
+        return success
 
     async def set_color_temp(self, kelvin: int) -> bool:
         """Set color temperature in Kelvin."""
-        self._color_temp = self._kelvin_to_internal(kelvin)
+        new_color_temp = self._kelvin_to_internal(kelvin)
 
         if self._is_on:
             if self.is_cct_only:
                 # Old CCT-only lights use separate temp command
-                cmd = self._build_temp_only_command(self._color_temp)
-                return await self._send_command(cmd)
+                cmd = self._build_temp_only_command(new_color_temp)
             else:
                 # Standard/Infinity lights use combined CCT command
-                cmd = self._build_cct_command(self._brightness, self._color_temp)
-                return await self._send_command(cmd)
+                cmd = self._build_cct_command(self._brightness, new_color_temp)
+            success = await self._send_command(cmd)
+            if not success:
+                return False
+
+        self._color_temp = new_color_temp
         return True
 
     async def set_rgb(self, hue: int, saturation: int, brightness: int | None = None) -> bool:
@@ -598,14 +627,22 @@ class NeewerLightDevice:
             _LOGGER.warning("Device %s does not support RGB", self._name)
             return False
 
-        self._hue = max(0, min(360, hue))
-        self._saturation = max(0, min(100, saturation))
+        new_hue = max(0, min(360, hue))
+        new_saturation = max(0, min(100, saturation))
+        new_brightness = self._brightness
         if brightness is not None:
-            self._brightness = max(0, min(100, brightness))
+            new_brightness = max(0, min(100, brightness))
 
-        self._is_on = True
-        cmd = self._build_hsi_command(self._hue, self._saturation, self._brightness)
-        return await self._send_command(cmd)
+        cmd = self._build_hsi_command(
+            new_hue, new_saturation, new_brightness
+        )
+        success = await self._send_command(cmd)
+        if success:
+            self._hue = new_hue
+            self._saturation = new_saturation
+            self._brightness = new_brightness
+            self._is_on = True
+        return success
 
     def _notify_callback(self, sender: int, data: bytearray) -> None:
         """Handle notification data from the device.
@@ -672,6 +709,10 @@ class NeewerLightDevice:
 
         except BleakError as err:
             _LOGGER.debug("Error querying %s: %s", self._name, err)
+            self._connected = False
+            return None
+        except Exception:
+            _LOGGER.exception("Unexpected error querying %s", self._name)
             self._connected = False
             return None
         finally:
@@ -779,31 +820,3 @@ class NeewerLightDevice:
             color_temp_kelvin,
             keep_connected,
         )
-
-
-def _is_neewer_device(name: str) -> bool:
-    """Check if a device name indicates a Neewer device."""
-    if not name:
-        return False
-    name_upper = name.upper()
-    return "NEEWER" in name_upper or name_upper.startswith("NW-")
-
-
-async def discover_neewer_lights(timeout: float = 10.0) -> list[BLEDevice]:
-    """Discover Neewer BLE lights."""
-    _LOGGER.debug("Scanning for Neewer lights...")
-
-    devices = []
-
-    def detection_callback(device: BLEDevice, advertisement_data):
-        if _is_neewer_device(device.name):
-            _LOGGER.debug("Found Neewer device: %s (%s)", device.name, device.address)
-            devices.append(device)
-    
-    scanner = BleakScanner(detection_callback=detection_callback)
-    await scanner.start()
-    await asyncio.sleep(timeout)
-    await scanner.stop()
-    
-    _LOGGER.info("Found %d Neewer device(s)", len(devices))
-    return devices

@@ -121,12 +121,5 @@ CONF_KEEP_CONNECTED = "keep_connected"
 MIN_MIREDS = 153  # ~6500K
 MAX_MIREDS = 370  # ~2700K
 
-# Scan timeout
-BLE_SCAN_TIMEOUT = 10
-
 # Connection retry settings
 MAX_CONNECTION_RETRIES = 3
-CONNECTION_RETRY_DELAY = 1.0
-
-# Platforms
-PLATFORMS = ["light"]

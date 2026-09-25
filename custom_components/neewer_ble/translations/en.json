@@ -55,5 +55,10 @@
         "name": "Light"
       }
     }
+  },
+  "exceptions": {
+    "command_failed": {
+      "message": "Failed to send the command to {name}. Make sure the light is powered on and in Bluetooth range."
+    }
   }
 }

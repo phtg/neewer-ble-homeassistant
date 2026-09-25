@@ -2,12 +2,10 @@
 
 from __future__ import annotations
 
-import asyncio
 import logging
 from typing import Any
 
 import voluptuous as vol
-from bleak import BleakScanner
 from bleak.backends.device import BLEDevice
 
 from homeassistant import config_entries
@@ -19,13 +17,12 @@ from homeassistant.const import CONF_ADDRESS, CONF_NAME
 from homeassistant.data_entry_flow import FlowResult
 
 from .const import (
-    DOMAIN,
-    BLE_SCAN_TIMEOUT,
-    DEFAULT_BRIGHTNESS,
-    DEFAULT_COLOR_TEMP,
     CONF_DEFAULT_BRIGHTNESS,
     CONF_DEFAULT_COLOR_TEMP,
     CONF_KEEP_CONNECTED,
+    DEFAULT_BRIGHTNESS,
+    DEFAULT_COLOR_TEMP,
+    DOMAIN,
 )
 
 _LOGGER = logging.getLogger(__name__)
@@ -49,7 +46,7 @@ class NeewerBLEConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         return NeewerBLEOptionsFlow()
 
     @staticmethod
-    def _is_neewer_device(name: str) -> bool:
+    def _is_neewer_device(name: str | None) -> bool:
         """Check if a device name indicates a Neewer device."""
         if not name:
             return False
@@ -61,19 +58,19 @@ class NeewerBLEConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
     ) -> FlowResult:
         """Handle the bluetooth discovery step."""
         _LOGGER.debug("Bluetooth discovery: %s", discovery_info)
-        
+
         await self.async_set_unique_id(discovery_info.address)
         self._abort_if_unique_id_configured()
-        
+
         self._discovery_info = discovery_info
-        
+
         # Check if this looks like a Neewer device
         name = discovery_info.name or ""
         if not self._is_neewer_device(name):
             return self.async_abort(reason="not_neewer_device")
-        
+
         self.context["title_placeholders"] = {"name": name}
-        
+
         return await self.async_step_bluetooth_confirm()
 
     async def async_step_bluetooth_confirm(
@@ -126,7 +123,7 @@ class NeewerBLEConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             else:
                 errors["base"] = "device_not_found"
 
-        # Scan for devices
+        # Read devices from Home Assistant's shared Bluetooth scanner cache.
         await self._async_discover_devices()
 
         # Build the selection schema - always include manual option
@@ -156,14 +153,14 @@ class NeewerBLEConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         if user_input is not None:
             address = user_input[CONF_ADDRESS].upper()
             name = user_input.get(CONF_NAME, "Neewer Light")
-            
+
             # Validate address format (basic check)
             if len(address) != 17 or address.count(":") != 5:
                 errors["base"] = "invalid_address"
             else:
                 await self.async_set_unique_id(address)
                 self._abort_if_unique_id_configured()
-                
+
                 return self.async_create_entry(
                     title=name,
                     data={
@@ -187,24 +184,13 @@ class NeewerBLEConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         """Discover Neewer BLE devices."""
         self._discovered_devices = {}
 
-        # First check already discovered bluetooth devices in HA
-        try:
-            for discovery_info in async_discovered_service_info(self.hass, connectable=True):
-                if self._is_neewer_device(discovery_info.name):
-                    self._discovered_devices[discovery_info.address] = discovery_info.device
-        except Exception as err:
-            _LOGGER.debug("Error checking HA bluetooth discoveries: %s", err)
-
-        # If no devices found via HA, do a direct scan
-        if not self._discovered_devices:
-            _LOGGER.debug("No devices from HA, performing direct BLE scan...")
-            try:
-                devices = await BleakScanner.discover(timeout=BLE_SCAN_TIMEOUT)
-                for device in devices:
-                    if self._is_neewer_device(device.name):
-                        self._discovered_devices[device.address] = device
-            except Exception as err:
-                _LOGGER.error("BLE scan failed: %s", err)
+        for discovery_info in async_discovered_service_info(
+            self.hass, connectable=True
+        ):
+            if self._is_neewer_device(discovery_info.name):
+                self._discovered_devices[discovery_info.address] = (
+                    discovery_info.device
+                )
 
         _LOGGER.debug("Discovered %d Neewer device(s)", len(self._discovered_devices))
 
