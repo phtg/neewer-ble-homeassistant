@@ -47,7 +47,17 @@ SUPPORTED_MODELS = {
     "SNL530": {"name": "SNL-530", "rgb": False, "cct_range": (3200, 5600), "cct_only": True, "light_type": 0},
     "SNL480": {"name": "SNL-480", "rgb": False, "cct_range": (3200, 5600), "cct_only": True, "light_type": 0},
 
-    # GL Series (Key lights) - Infinity protocol
+    # GL Series (Key lights)
+    # GL1 Pro advertises its product name instead of a numeric model code and
+    # uses the standard, CCT-only protocol (separate brightness/temp packets).
+    "GL1PRO": {
+        "name": "GL1 Pro",
+        "rgb": False,
+        "cct_range": (2900, 7000),
+        "cct_only": True,
+        "light_type": 0,
+        "use_power_commands": True,
+    },
     "20220001": {"name": "GL1", "rgb": False, "cct_range": (2900, 7000), "cct_only": False, "light_type": 1},
 
     # CB Series - Infinity protocol

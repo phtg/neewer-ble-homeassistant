@@ -153,6 +153,11 @@ class NeewerLightDevice:
         return self._model_info.get("cct_only", False)
 
     @property
+    def uses_power_commands(self) -> bool:
+        """Return True if the device requires explicit power commands."""
+        return self._model_info.get("use_power_commands", False)
+
+    @property
     def color_temp_range(self) -> tuple[int, int]:
         """Return the color temperature range in Kelvin."""
         return self._model_info.get("cct_range", (3200, 5600))
@@ -361,8 +366,7 @@ class NeewerLightDevice:
             brightness: 0-100
             color_temp: 0-100 (internal scale, maps to kelvin range)
         """
-        # Convert 0-100 internal scale to 32-56 protocol temp value
-        temp_protocol = int(32 + (color_temp / 100) * 24)
+        temp_protocol = self._internal_to_protocol_temp(color_temp)
         gm_value = 50  # Neutral green-magenta tint
 
         if self.light_type == 1:
@@ -441,15 +445,18 @@ class NeewerLightDevice:
 
         From NeewerLite-Python:
         - [120, 131, 1, temp] + checksum
-          where temp is 32-56 (for 3200K-5600K)
+          where temp is the color temperature in hundreds of Kelvin
 
         Args:
             color_temp: 0-100 (internal scale, maps to kelvin range)
         """
-        # Convert 0-100 internal scale to 32-56 protocol temp value
-        temp_protocol = int(32 + (color_temp / 100) * 24)
+        temp_protocol = self._internal_to_protocol_temp(color_temp)
         cmd = [0x78, STD_TEMP_CMD, 0x01, temp_protocol]
         return self._add_checksum(cmd)
+
+    def _internal_to_protocol_temp(self, internal: int) -> int:
+        """Convert the internal 0-100 scale to hundreds of Kelvin."""
+        return round(self._internal_to_kelvin(internal) / 100)
 
     def _kelvin_to_internal(self, kelvin: int) -> int:
         """Convert Kelvin to internal 0-100 scale."""
@@ -493,6 +500,12 @@ class NeewerLightDevice:
         if self.is_cct_only:
             # Old CCT-only lights need separate brightness and temp commands
             try:
+                if self.uses_power_commands:
+                    power_cmd = self._build_power_command(on=True)
+                    if not await self._send_command(power_cmd, keep_connected=True):
+                        return False
+                    await asyncio.sleep(0.05)
+
                 bri_cmd = self._build_brightness_only_command(self._brightness)
                 if not await self._send_command(bri_cmd, keep_connected=True):
                     return False
@@ -517,7 +530,9 @@ class NeewerLightDevice:
         """
         self._is_on = False
 
-        if self.is_cct_only:
+        if self.uses_power_commands:
+            cmd = self._build_power_command(on=False)
+        elif self.is_cct_only:
             # Old CCT-only lights use separate brightness command
             cmd = self._build_brightness_only_command(0)
         else:
