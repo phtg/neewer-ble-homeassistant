@@ -1,0 +1,30 @@
+name: Tests
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  tests:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+      - name: Validate JSON
+        run: |
+          python -m json.tool hacs.json >/dev/null
+          python -m json.tool custom_components/neewer_ble/manifest.json >/dev/null
+          python -m json.tool custom_components/neewer_ble/strings.json >/dev/null
+          python -m json.tool custom_components/neewer_ble/translations/en.json >/dev/null
+      - name: Compile Python
+        run: python -m compileall -q custom_components tests
+      - name: Run unit tests
+        run: python -m unittest discover -s tests -v

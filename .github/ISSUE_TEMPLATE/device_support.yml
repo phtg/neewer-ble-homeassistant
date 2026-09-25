@@ -1,0 +1,61 @@
+name: Device support or beta feedback
+description: Request support for another light or report hardware results for a beta profile.
+title: "[Device]: "
+labels:
+  - device-support
+body:
+  - type: input
+    id: model
+    attributes:
+      label: Light model
+      description: Include the exact model printed on the light or power supply.
+      placeholder: NEEWER PL60C
+    validations:
+      required: true
+  - type: input
+    id: advertised_name
+    attributes:
+      label: Bluetooth advertised name
+      description: Preserve spaces, hyphens, capitalization, and any suffix.
+      placeholder: NEEWER-PL60C
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: Integration version tested
+      placeholder: 0.4.0-beta.1
+    validations:
+      required: true
+  - type: dropdown
+    id: result
+    attributes:
+      label: Test result
+      options:
+        - Not tested yet; requesting support
+        - Power control works
+        - Brightness works
+        - Color temperature works
+        - RGB color works
+        - Nothing responds
+        - Partially works; details below
+    validations:
+      required: true
+  - type: textarea
+    id: details
+    attributes:
+      label: Test details
+      description: List every control you tested and what the physical light did.
+    validations:
+      required: true
+  - type: textarea
+    id: references
+    attributes:
+      label: Protocol or product references
+      description: Optional links to protocol implementations, product pages, or existing upstream issues and pull requests.
+  - type: checkboxes
+    id: follow_up
+    attributes:
+      label: Hardware follow-up
+      options:
+        - label: I can test a future beta on this physical light and report the results.
