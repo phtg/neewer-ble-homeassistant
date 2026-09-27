@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import asyncio
 import logging
 from typing import Any
 
@@ -60,6 +61,8 @@ class NeewerBLELight(LightEntity):
         """Initialize the light."""
         self._device = device
         self._entry = entry
+        self._command_lock = asyncio.Lock()
+        self._command_generation = 0
 
         # Entity attributes
         self._attr_unique_id = device.address.replace(":", "_").lower()
@@ -115,6 +118,21 @@ class NeewerBLELight(LightEntity):
 
     async def async_turn_on(self, **kwargs: Any) -> None:
         """Turn on the light."""
+        self._command_generation += 1
+        command_generation = self._command_generation
+
+        async with self._command_lock:
+            if command_generation != self._command_generation:
+                _LOGGER.debug(
+                    "Skipping superseded command for %s", self._device.name
+                )
+                return
+            await self._async_turn_on(command_generation, **kwargs)
+
+    async def _async_turn_on(
+        self, command_generation: int, **kwargs: Any
+    ) -> None:
+        """Send the latest turn-on command while holding the command lock."""
         brightness = kwargs.get(ATTR_BRIGHTNESS)
         color_temp_kelvin = kwargs.get(ATTR_COLOR_TEMP_KELVIN)
         hs_color = kwargs.get(ATTR_HS_COLOR)
@@ -162,14 +180,25 @@ class NeewerBLELight(LightEntity):
             )
 
         self._attr_color_mode = new_color_mode
-        self.async_write_ha_state()
+        if command_generation == self._command_generation:
+            self.async_write_ha_state()
 
     async def async_turn_off(self, **kwargs: Any) -> None:
         """Turn off the light."""
-        if not await self._device.turn_off():
-            raise HomeAssistantError(
-                translation_domain=DOMAIN,
-                translation_key="command_failed",
-                translation_placeholders={"name": self._device.name},
-            )
-        self.async_write_ha_state()
+        self._command_generation += 1
+        command_generation = self._command_generation
+
+        async with self._command_lock:
+            if command_generation != self._command_generation:
+                _LOGGER.debug(
+                    "Skipping superseded command for %s", self._device.name
+                )
+                return
+            if not await self._device.turn_off():
+                raise HomeAssistantError(
+                    translation_domain=DOMAIN,
+                    translation_key="command_failed",
+                    translation_placeholders={"name": self._device.name},
+                )
+            if command_generation == self._command_generation:
+                self.async_write_ha_state()

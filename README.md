@@ -14,6 +14,7 @@ This integration supports Neewer lights that use Bluetooth for control, includin
 ### Tested
 
 - **GL1 Pro** - Key Light
+- **PL60C** - RGB Panel Light (`NW-20220016&*`)
 
 ### Should Work (Untested)
 
@@ -30,11 +31,10 @@ This integration supports Neewer lights that use Bluetooth for control, includin
 ### Beta - Community Testing Needed
 
 - **MS150B** - `MS150B-*` Bluetooth name variant
-- **PL60C** - RGB Panel Light
-- **AP150C** - RGB Panel Light
+- **AP150C** - RGB Panel Light (`NW-20240075&*`)
 - **RGB168** - RGB Panel Light
 
-These profiles are based on published protocol implementations and manufacturer specifications, but have not yet been tested with physical hardware in this integration.
+The remaining beta profiles are based on published protocol implementations and manufacturer specifications, but have not yet been confirmed with physical hardware in this integration.
 
 ## Features
 
