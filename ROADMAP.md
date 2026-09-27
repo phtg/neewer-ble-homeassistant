@@ -34,7 +34,7 @@ generations ("standard" and "Infinity").
 
 ## Goals
 
-### Next (guess, based on beta status and open device list)
+### Next
 
 - Reach a stable `v0.4.0` release once enough of the beta model list (MS150B, AP150C, RGB168) has
   community hardware confirmation, or ship with clearer beta labeling if confirmation stalls.
@@ -43,15 +43,13 @@ generations ("standard" and "Infinity").
 - Keep CI (tests, Hassfest, HACS validation) green as new device profiles and protocol variants are
   added — this is the main regression guard given there's no way to test against real hardware in CI.
 
-### Later (guess)
+### Later
 
-- Investigate real state feedback (reading light status via BLE notifications) to reduce reliance on
-  the "assumed state" (`iot_class: assumed_state`) optimistic model, if the protocol allows reliable
-  status queries beyond `CMD_GET_POWER_STATUS` / `CMD_GET_CHANNEL_STATUS`.
 - Broader protocol coverage for additional Neewer product lines as they're released, mirroring
   upstream NeewerLite-Python protocol updates.
 - Possible HACS default-repository submission once out of beta (currently installed via custom
   repository only).
+- Nothing else much, just as stable as realistically possible Neewer support in HomeAssistant
 
 ## Non-goals
 
