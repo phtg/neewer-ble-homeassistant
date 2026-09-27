@@ -1,5 +1,6 @@
 """Tests for the Neewer light entity."""
 
+import asyncio
 from types import SimpleNamespace
 from unittest.mock import AsyncMock, Mock
 
@@ -95,3 +96,41 @@ async def test_failed_turn_off_raises_and_does_not_publish_state() -> None:
         await entity.async_turn_off()
 
     entity.async_write_ha_state.assert_not_called()
+
+
+async def test_rapid_updates_skip_superseded_pending_commands() -> None:
+    """Only the newest slider update should run after an active command."""
+    entity, device = _entity()
+    entity._attr_color_mode = ColorMode.COLOR_TEMP
+    first_command_started = asyncio.Event()
+    release_first_command = asyncio.Event()
+    sent_brightness: list[int | None] = []
+
+    async def _turn_on(*, brightness, color_temp_kelvin) -> bool:
+        sent_brightness.append(brightness)
+        if len(sent_brightness) == 1:
+            first_command_started.set()
+            await release_first_command.wait()
+        return True
+
+    device.turn_on.side_effect = _turn_on
+
+    first = asyncio.create_task(
+        entity.async_turn_on(**{ATTR_BRIGHTNESS: 51})
+    )
+    await first_command_started.wait()
+
+    superseded = asyncio.create_task(
+        entity.async_turn_on(**{ATTR_BRIGHTNESS: 102})
+    )
+    await asyncio.sleep(0)
+    latest = asyncio.create_task(
+        entity.async_turn_on(**{ATTR_BRIGHTNESS: 204})
+    )
+    await asyncio.sleep(0)
+
+    release_first_command.set()
+    await asyncio.gather(first, superseded, latest)
+
+    assert sent_brightness == [20, 80]
+    assert entity.async_write_ha_state.call_count == 1

@@ -107,6 +107,7 @@ def test_detects_beta_device_profiles() -> None:
     cases = (
         ("MS150B-9A785C", "MS150B", (2700, 6500), False, 1),
         ("NW-20220016&776A0500", "PL60C", (2500, 10000), True, 1),
+        ("NW-20240075&B4270500", "AP150C", (2500, 10000), True, 1),
         ("NEEWER-AP150C-2", "AP150C", (2500, 10000), True, 1),
         ("NEEWER-RGB168", "RGB168", (2500, 8500), True, 2),
     )

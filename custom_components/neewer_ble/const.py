@@ -39,7 +39,7 @@ SUPPORTED_MODELS = {
     "20220035": {"name": "MS150B", "rgb": False, "cct_range": (2700, 6500), "cct_only": False, "light_type": 1},
     "20230080": {"name": "MS60C", "rgb": True, "cct_range": (2700, 6500), "cct_only": False, "light_type": 1},
 
-    # Infinity RGB panels - community hardware testing needed
+    # Infinity RGB panels
     "20220016": {
         "name": "PL60C",
         "rgb": True,
@@ -48,6 +48,14 @@ SUPPORTED_MODELS = {
         "light_type": 1,
     },
     "PL60C": {"name": "PL60C", "rgb": True, "cct_range": (2500, 10000), "cct_only": False, "light_type": 1},
+    # AP150C advertises product code 20240075 rather than its model name.
+    "20240075": {
+        "name": "AP150C",
+        "rgb": True,
+        "cct_range": (2500, 10000),
+        "cct_only": False,
+        "light_type": 1,
+    },
     "AP150C": {
         "name": "AP150C",
         "rgb": True,
