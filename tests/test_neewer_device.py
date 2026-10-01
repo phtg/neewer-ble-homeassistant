@@ -196,6 +196,55 @@ async def test_connection_uses_fresh_ble_device_callback() -> None:
     assert establish.await_args.kwargs["ble_device_callback"] is callback
 
 
+def _mac_bytes(address: str) -> list[int]:
+    """Convert a colon-separated MAC address string to a list of int bytes."""
+    return [int(part, 16) for part in address.split(":")]
+
+
+def _with_checksum(cmd: list[int]) -> list[int]:
+    """Append the sum-of-bytes checksum the device itself computes."""
+    return cmd + [sum(cmd) & 0xFF]
+
+
+def test_infinity_protocol_cct_command() -> None:
+    """PL60C (light_type 1) CCT commands use the full Infinity layout with MAC bytes."""
+    device = NeewerLightDevice(_ble_device("NEEWER-PL60C"))
+    assert device.light_type == 1
+    mac = _mac_bytes(device.address)
+
+    temp_protocol = device._internal_to_protocol_temp(50)
+    expected = _with_checksum(
+        [0x78, 0x90, 0x0B, *mac, 0x87, 60, temp_protocol, 50, 0x04]
+    )
+
+    assert device._build_cct_command(60, 50) == expected
+
+
+def test_infinity_protocol_hsi_command() -> None:
+    """PL60C (light_type 1) HSI commands use the full Infinity layout with MAC bytes."""
+    device = NeewerLightDevice(_ble_device("NEEWER-PL60C"))
+    mac = _mac_bytes(device.address)
+
+    hue = 280
+    expected = _with_checksum(
+        [0x78, 0x8F, 0x0B, *mac, 0x86, hue & 0xFF, (hue >> 8) & 0xFF, 75, 40]
+    )
+
+    assert device._build_hsi_command(hue, 75, 40) == expected
+
+
+def test_infinity_protocol_power_commands() -> None:
+    """PL60C (light_type 1) power commands use the full Infinity layout with MAC bytes."""
+    device = NeewerLightDevice(_ble_device("NEEWER-PL60C"))
+    mac = _mac_bytes(device.address)
+
+    expected_on = _with_checksum([0x78, 0x8D, 0x08, *mac, 0x81, 1])
+    expected_off = _with_checksum([0x78, 0x8D, 0x08, *mac, 0x81, 0])
+
+    assert device._build_power_command(on=True) == expected_on
+    assert device._build_power_command(on=False) == expected_off
+
+
 async def test_rgb_failure_preserves_color_state() -> None:
     """Failed RGB writes should not change the assumed color."""
     device = NeewerLightDevice(_ble_device("NEEWER-RGB660"))
