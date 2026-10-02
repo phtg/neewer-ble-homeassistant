@@ -51,7 +51,11 @@ class NeewerBLEConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         if not name:
             return False
         name_upper = name.upper()
-        return "NEEWER" in name_upper or name_upper.startswith("NW-")
+        return (
+            "NEEWER" in name_upper
+            or name_upper.startswith("NW-")
+            or name_upper.startswith("MS150B")
+        )
 
     async def async_step_bluetooth(
         self, discovery_info: BluetoothServiceInfoBleak

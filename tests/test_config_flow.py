@@ -6,6 +6,7 @@ from unittest.mock import patch
 from homeassistant import config_entries
 from homeassistant.data_entry_flow import FlowResultType
 
+from custom_components.neewer_ble.config_flow import NeewerBLEConfigFlow
 from custom_components.neewer_ble.const import DOMAIN
 
 
@@ -76,6 +77,56 @@ async def test_bluetooth_discovery_confirmation(hass) -> None:
 
     assert created["type"] is FlowResultType.CREATE_ENTRY
     assert created["data"]["address"] == service_info.address
+
+
+async def test_bluetooth_discovery_confirmation_for_ms150b(hass) -> None:
+    """MS150B devices advertise without NEEWER/NW- prefixes but should still be discovered."""
+    service_info = _service_info(name="MS150B-9A785C")
+
+    result = await hass.config_entries.flow.async_init(
+        DOMAIN,
+        context={"source": config_entries.SOURCE_BLUETOOTH},
+        data=service_info,
+    )
+
+    assert result["type"] is FlowResultType.FORM
+    assert result["step_id"] == "bluetooth_confirm"
+
+
+async def test_user_flow_lists_ms150b_from_discovery_cache(hass) -> None:
+    """MS150B devices should appear in the manual device picker list."""
+    service_info = _service_info(name="MS150B-9A785C")
+
+    with patch(
+        "custom_components.neewer_ble.config_flow.async_discovered_service_info",
+        return_value=[service_info],
+    ):
+        result = await hass.config_entries.flow.async_init(
+            DOMAIN,
+            context={"source": config_entries.SOURCE_USER},
+        )
+
+    assert result["type"] is FlowResultType.FORM
+    assert result["step_id"] == "user"
+
+    with patch(
+        "custom_components.neewer_ble.async_setup_entry",
+        return_value=True,
+    ):
+        created = await hass.config_entries.flow.async_configure(
+            result["flow_id"],
+            {"address": service_info.address},
+        )
+
+    assert created["type"] is FlowResultType.CREATE_ENTRY
+    assert created["title"] == "MS150B-9A785C"
+
+
+def test_is_neewer_device_matches_ms150b() -> None:
+    """The Neewer device name filter should recognize MS150B advertised names."""
+    assert NeewerBLEConfigFlow._is_neewer_device("MS150B-9A785C") is True
+    assert NeewerBLEConfigFlow._is_neewer_device("ms150b-9a785c") is True
+    assert NeewerBLEConfigFlow._is_neewer_device("SomeOtherDevice") is False
 
 
 async def test_manual_flow_rejects_invalid_address(hass) -> None:
