@@ -20,9 +20,12 @@ This integration supports Neewer lights that use Bluetooth for control, includin
 
 - MS60C - 65W RGB COB Light
 - RGB660 / RGB660 PRO - Panel Lights
-- RGB480 / RGB530 - Panel Lights
+- RGB480 / RGB530 / RGB530 PRO - Panel Lights
+- RGB176 - Panel Light
+- RGB960 - Panel Light
+- RGB512 / RGB800 - Panel Lights
 - SL-80 - Bi-Color Panel
-- SNL-660 - Bi-Color Panel
+- SNL-660 / SNL-530 / SNL-480 - Bi-Color Panels
 - GL1 - Key Light
 - CB100C / CB300B - COB Lights
 - RGB1 - Light Wand
