@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import logging
+import re
 from typing import Any
 
 import voluptuous as vol
@@ -155,13 +156,13 @@ class NeewerBLEConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         errors: dict[str, str] = {}
 
         if user_input is not None:
-            address = user_input[CONF_ADDRESS].upper()
+            address = user_input[CONF_ADDRESS]
             name = user_input.get(CONF_NAME, "Neewer Light")
 
-            # Validate address format (basic check)
-            if len(address) != 17 or address.count(":") != 5:
+            if re.fullmatch(r"[0-9A-Fa-f]{2}(?::[0-9A-Fa-f]{2}){5}", address) is None:
                 errors["base"] = "invalid_address"
             else:
+                address = address.upper()
                 await self.async_set_unique_id(address)
                 self._abort_if_unique_id_configured()
 
