@@ -97,7 +97,7 @@ class NeewerBLELight(LightEntity):
     def brightness(self) -> int | None:
         """Return the brightness of this light between 0..255."""
         # Convert 0-100 to 0-255
-        return int(self._device.brightness * 2.55)
+        return (self._device.brightness * 255 + 50) // 100
 
     @property
     def color_temp_kelvin(self) -> int | None:
@@ -138,7 +138,11 @@ class NeewerBLELight(LightEntity):
         hs_color = kwargs.get(ATTR_HS_COLOR)
 
         # Convert HA brightness (0-255) to Neewer (0-100)
-        brightness_pct = int(brightness / 2.55) if brightness is not None else None
+        brightness_pct = None
+        if brightness is not None:
+            brightness_pct = (
+                max(1, (brightness * 100 + 127) // 255) if brightness > 0 else 0
+            )
         new_color_mode = self._attr_color_mode
 
         if hs_color is not None and self._device.supports_rgb:

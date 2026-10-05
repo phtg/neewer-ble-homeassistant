@@ -6,7 +6,12 @@ from unittest.mock import AsyncMock, Mock
 
 import pytest
 
-from homeassistant.components.light import ATTR_BRIGHTNESS, ColorMode
+from homeassistant.components.light import (
+    ATTR_BRIGHTNESS,
+    ATTR_COLOR_TEMP_KELVIN,
+    ATTR_HS_COLOR,
+    ColorMode,
+)
 from homeassistant.exceptions import HomeAssistantError
 
 from custom_components.neewer_ble.light import NeewerBLELight
@@ -39,6 +44,49 @@ def _entity() -> tuple[NeewerBLELight, SimpleNamespace]:
     entity = NeewerBLELight(device, entry)
     entity.async_write_ha_state = Mock()
     return entity, device
+
+
+@pytest.mark.parametrize(
+    "brightness, expected",
+    [(0, 0), (1, 1), (2, 1), (128, 50), (255, 100), (None, None)],
+)
+@pytest.mark.parametrize("mode", ["cct", "explicit_cct", "hs", "explicit_hs"])
+async def test_turn_on_brightness_scaling(brightness, expected, mode) -> None:
+    """Scale brightness in every color path, preserving omitted brightness."""
+    entity, device = _entity()
+    kwargs = {} if brightness is None else {ATTR_BRIGHTNESS: brightness}
+    if mode == "explicit_cct":
+        entity._attr_color_mode = ColorMode.HS
+        kwargs[ATTR_COLOR_TEMP_KELVIN] = 5000
+    elif mode == "hs":
+        entity._attr_color_mode = ColorMode.HS
+    elif mode == "explicit_hs":
+        kwargs[ATTR_HS_COLOR] = (120, 40)
+
+    await entity.async_turn_on(**kwargs)
+
+    if mode in ("hs", "explicit_hs"):
+        device.set_rgb.assert_awaited_once_with(
+            hue=120 if mode == "explicit_hs" else 280,
+            saturation=40 if mode == "explicit_hs" else 75,
+            brightness=expected,
+        )
+        device.turn_on.assert_not_awaited()
+    else:
+        device.turn_on.assert_awaited_once_with(
+            brightness=expected,
+            color_temp_kelvin=5000 if mode == "explicit_cct" else None,
+        )
+        device.set_rgb.assert_not_awaited()
+
+
+@pytest.mark.parametrize("brightness, expected", [(0, 0), (50, 128), (100, 255)])
+def test_brightness_property_scaling(brightness, expected) -> None:
+    """Report rounded Home Assistant brightness including both endpoints."""
+    entity, device = _entity()
+    device.brightness = brightness
+
+    assert entity.brightness == expected
 
 
 async def test_brightness_only_update_preserves_hs_mode() -> None:
