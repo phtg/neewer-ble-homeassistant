@@ -227,6 +227,58 @@ Reproduce the problem, then open **Settings** → **System** → **Logs**. Remov
 
 Contributions and hardware test results are welcome. Use the [device support and beta feedback form](https://github.com/phtg/neewer-ble-homeassistant/issues/new?template=device_support.yml) for a light that is missing or needs confirmation. See [CONTRIBUTING.md](CONTRIBUTING.md) before submitting code.
 
+## Adding a New Model
+
+To add support for a new Neewer light model, add an entry to the
+`SUPPORTED_MODELS` dictionary in
+`custom_components/neewer_ble/const.py`:
+
+```python
+"MODEL_CODE": {
+    "name": "Display Name",
+    "rgb": bool,                    # Supports RGB/HSI mode
+    "cct_range": (min_kelvin, max_kelvin),
+    "cct_only": bool,               # Uses separate CCT-only commands (older bi-color lights)
+    "light_type": int,              # 0=standard, 1=infinity, 2=infinity-hybrid (replaces the older boolean "infinity" field)
+}
+```
+
+The dictionary key is a model code that the integration searches for
+within the device's Bluetooth advertised name. During detection, the
+integration normalises both the advertised name and each model code
+(upper-cased; common prefixes like `NEEWER-` stripped; hyphens and spaces
+removed) and selects the model code that gives the longest match. For
+example, a device advertising as `NEEWER-RGB660` matches the `"RGB660"`
+entry, and `NW-20220016&123456` matches the `"20220016"` entry.
+
+Optional fields:
+
+- **`use_power_commands`** (`bool`): set to `True` for models that need
+  separate power-on and power-off packets rather than toggling the general
+  mode byte.
+
+### Example
+
+The `RGB660` panel light (which already exists in `const.py`):
+
+```python
+"RGB660": {"name": "RGB660", "rgb": True, "cct_range": (3200, 5600), "cct_only": False, "light_type": 0},
+```
+
+This tells the integration that the device:
+- Advertises as `RGB660` over BLE
+- Has a display name of `"RGB660"`
+- Supports RGB colour control (`"rgb": True`)
+- Has a colour-temperature range of 3200–5600 K
+- Does **not** use the CCT-only command path (`"cct_only": False`)
+- Uses the standard protocol (`"light_type": 0`)
+
+For a light that is bi‑colour only (no RGB), omit or set `"rgb": False` and
+choose a `"cct_range"` that matches the manufacturer's specifications. For
+an Infinity‑protocol light, set `"light_type": 1` instead of `0`.
+
+See `const.py` for all currently supported models and their field values.
+
 ## Protocol Information
 
 This integration is based on the reverse-engineered Neewer BLE protocol from:
