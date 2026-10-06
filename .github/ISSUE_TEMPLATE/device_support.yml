@@ -27,10 +27,41 @@ body:
       placeholder: 0.4.0-beta.3
     validations:
       required: true
+  - type: input
+    id: home_assistant_version
+    attributes:
+      label: Home Assistant version
+      placeholder: 2026.10.0
+    validations:
+      required: true
+  - type: dropdown
+    id: bluetooth_transport
+    attributes:
+      label: Bluetooth transport
+      options:
+        - Local Bluetooth adapter
+        - ESPHome Bluetooth proxy
+        - Both local adapter and ESPHome proxy
+        - Other / unknown
+    validations:
+      required: true
+  - type: dropdown
+    id: discovery_result
+    attributes:
+      label: Automatic discovery result
+      description: Check Settings → Devices & Services before using Add Integration or entering an address. Observations must precede manual setup; record failure details in Test details below. If already configured, choose the corresponding unverified option.
+      multiple: false
+      options:
+        - Discovered automatically before adding the integration manually
+        - Not discovered automatically and manual setup was needed
+        - Not checked
+        - Already configured so discovery was not checked
+    validations:
+      required: true
   - type: dropdown
     id: result
     attributes:
-      label: Test result
+      label: Control test result
       options:
         - Not tested yet; requesting support
         - Power control works
@@ -45,7 +76,7 @@ body:
     id: details
     attributes:
       label: Test details
-      description: List every control you tested and what the physical light did.
+      description: List every control you tested and what the physical light did. Record automatic-discovery failure observations separately from control results here.
     validations:
       required: true
   - type: textarea

@@ -15,6 +15,14 @@ Use the repository's issue forms for a bug report or device-support result. Incl
 
 Hardware confirmation is especially valuable because maintainers do not have every supported Neewer light.
 
+### Checking automatic discovery
+
+With the integration installed and Home Assistant restarted, check a powered, in-range light that has not previously been configured in Home Assistant. Disconnect the Neewer app from the light, then look for a discovered Neewer integration in **Settings → Devices & Services** before using **Add Integration** or entering a Bluetooth address. Finding or adding a light through manual setup does not confirm automatic discovery.
+
+Record the automatic-discovery result, integration and Home Assistant versions, complete Bluetooth advertised name, and Bluetooth transport (local adapter, ESPHome proxy, both, or other/unknown) in the [device support and beta feedback form](https://github.com/phtg/neewer-ble-homeassistant/issues/new?template=device_support.yml). Keep discovery observations separate from control results, and put discovery failure observations in **Test details**.
+
+If you did not check discovery before manual setup, choose **Not checked**. If the light is already configured, choose **Already configured so discovery was not checked**; keep working entries in place. Both options leave automatic discovery unverified, even if controls work.
+
 ## Making a change
 
 1. Fork the repository and create a focused branch.
