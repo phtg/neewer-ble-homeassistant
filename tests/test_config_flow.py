@@ -3,6 +3,8 @@
 from types import SimpleNamespace
 from unittest.mock import patch
 
+import pytest
+
 from homeassistant import config_entries
 from homeassistant.data_entry_flow import FlowResultType
 
@@ -129,7 +131,26 @@ def test_is_neewer_device_matches_ms150b() -> None:
     assert NeewerBLEConfigFlow._is_neewer_device("SomeOtherDevice") is False
 
 
-async def test_manual_flow_rejects_invalid_address(hass) -> None:
+@pytest.mark.parametrize(
+    "address",
+    [
+        "",
+        "not-a-mac",
+        "GG:HH:II:JJ:KK:LL",
+        "AA:BB:CC:DD:EE:FG",
+        "AA:BB:CC:DD:EE",
+        "AA:BB:CC:DD:EE:FF:00",
+        "A:BB:CC:DD:EE:FFF",
+        "AAA:B:CC:DD:EE:FF",
+        "AABB::CC:DD:EE:FF",
+        ":AA:BB:CC:DD:EEFF",
+        "AA:BB:CC:DD:EEFF:",
+        " AA:BB:CC:DD:EE:FF",
+        "AA:BB:CC:DD:EE:FF ",
+        "AA:BB:CC:DD:EE:FF\n",
+    ],
+)
+async def test_manual_flow_rejects_invalid_address(hass, address) -> None:
     """Manual setup should validate Bluetooth MAC address formatting."""
     with patch(
         "custom_components.neewer_ble.config_flow.async_discovered_service_info",
@@ -145,8 +166,60 @@ async def test_manual_flow_rejects_invalid_address(hass) -> None:
     )
     invalid = await hass.config_entries.flow.async_configure(
         manual["flow_id"],
-        {"address": "not-a-mac", "name": "Studio light"},
+        {"address": address, "name": "Studio light"},
     )
 
     assert invalid["type"] is FlowResultType.FORM
+    assert invalid["step_id"] == "manual"
     assert invalid["errors"] == {"base": "invalid_address"}
+    assert hass.config_entries.async_entries(DOMAIN) == []
+
+
+@pytest.mark.parametrize("address", ["aa:bb:cc:dd:ee:ff", "00:00:00:00:00:00"])
+async def test_manual_flow_normalizes_valid_address(hass, address) -> None:
+    """Valid manual addresses should use uppercase data and unique IDs."""
+    result = await hass.config_entries.flow.async_init(
+        DOMAIN, context={"source": config_entries.SOURCE_USER},
+    )
+    manual = await hass.config_entries.flow.async_configure(
+        result["flow_id"], {"address": "manual"}
+    )
+
+    with patch("custom_components.neewer_ble.async_setup_entry", return_value=True):
+        created = await hass.config_entries.flow.async_configure(
+            manual["flow_id"], {"address": address, "name": "Studio light"}
+        )
+
+    assert created["type"] is FlowResultType.CREATE_ENTRY
+    assert created["title"] == "Studio light"
+    assert created["data"] == {"address": address.upper(), "name": "Studio light"}
+    assert created["result"].unique_id == address.upper()
+
+
+@pytest.mark.parametrize("address", ["AA:BB:CC:DD:EE:FF", "aa:bb:cc:dd:ee:ff"])
+async def test_manual_flow_aborts_for_discovered_entry(hass, address) -> None:
+    """Manual entry should detect a device already configured by discovery."""
+    discovered = await hass.config_entries.flow.async_init(
+        DOMAIN,
+        context={"source": config_entries.SOURCE_BLUETOOTH},
+        data=_service_info(),
+    )
+    with patch("custom_components.neewer_ble.async_setup_entry", return_value=True):
+        created = await hass.config_entries.flow.async_configure(
+            discovered["flow_id"], {}
+        )
+    assert created["type"] is FlowResultType.CREATE_ENTRY
+
+    result = await hass.config_entries.flow.async_init(
+        DOMAIN, context={"source": config_entries.SOURCE_USER},
+    )
+    manual = await hass.config_entries.flow.async_configure(
+        result["flow_id"], {"address": "manual"}
+    )
+    duplicate = await hass.config_entries.flow.async_configure(
+        manual["flow_id"], {"address": address, "name": "Studio light"}
+    )
+
+    assert duplicate["type"] is FlowResultType.ABORT
+    assert duplicate["reason"] == "already_configured"
+    assert hass.config_entries.async_entries(DOMAIN) == [created["result"]]
