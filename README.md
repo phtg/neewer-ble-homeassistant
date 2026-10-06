@@ -39,6 +39,39 @@ This integration supports Neewer lights that use Bluetooth for control, includin
 
 The remaining beta profiles are based on published protocol implementations and manufacturer specifications, but have not yet been confirmed with physical hardware in this integration.
 
+## Supported models
+
+Model capabilities from [`SUPPORTED_MODELS`](custom_components/neewer_ble/const.py). Alternate advertised names for the same model are listed once.
+
+| Model | RGB | Colour temperature range | Protocol |
+| --- | --- | --- | --- |
+| MS150B | No | 2700–6500 K | Infinity |
+| MS60C | Yes | 2700–6500 K | Infinity |
+| PL60C | Yes | 2500–10000 K | Infinity |
+| AP150C | Yes | 2500–10000 K | Infinity |
+| RGB660 PRO | Yes | 3200–5600 K | Standard |
+| RGB660 | Yes | 3200–5600 K | Standard |
+| RGB480 | Yes | 3200–5600 K | Standard |
+| RGB530 | Yes | 3200–5600 K | Standard |
+| RGB530 PRO | Yes | 3200–5600 K | Standard |
+| RGB176 | Yes | 3200–5600 K | Standard |
+| RGB960 | Yes | 3200–5600 K | Standard |
+| RGB168 | Yes | 2500–8500 K | Standard |
+| SL-80 | No | 3200–8500 K | Standard |
+| SNL-660 | No | 3200–5600 K | Standard |
+| SNL-530 | No | 3200–5600 K | Standard |
+| SNL-480 | No | 3200–5600 K | Standard |
+| GL1 Pro | No | 2900–7000 K | Standard |
+| GL1 | No | 2900–7000 K | Infinity |
+| CB100C | Yes | 2700–6500 K | Infinity |
+| CB300B | No | 2700–6500 K | Infinity |
+| RGB512 | Yes | 2500–10000 K | Standard |
+| RGB800 | Yes | 2500–10000 K | Standard |
+| RGB1 | Yes | 3200–5600 K | Standard |
+| TL60 RGB | Yes | 2700–6500 K | Standard |
+
+RGB168, RGB512 and RGB800 use the Infinity-hybrid profile: standard protocol commands with an extended CCT packet that includes green-magenta adjustment.
+
 ## Features
 
 - **Brightness control** (0-100%)
