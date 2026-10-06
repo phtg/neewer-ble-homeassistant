@@ -206,14 +206,17 @@ To add support for a new Neewer light model, add an entry to the
     "rgb": bool,                    # Supports RGB/HSI mode
     "cct_range": (min_kelvin, max_kelvin),
     "cct_only": bool,               # Uses separate CCT-only commands (older bi-color lights)
-    "light_type": int,              # 0=standard, 1=infinity, 2=infinity-hybrid
+    "light_type": int,              # 0=standard, 1=infinity, 2=infinity-hybrid (replaces the older boolean "infinity" field)
 }
 ```
 
-The dictionary key (the model code) must match the device's Bluetooth
-advertised name exactly. The integration compares the full advertised name
-against each key — for example, a light that advertises as `RGB660` would
-match the `"RGB660"` entry.
+The dictionary key is a model code that the integration searches for
+within the device's Bluetooth advertised name. During detection, the
+integration normalises both the advertised name and each model code
+(upper-cased; common prefixes like `NEEWER-` stripped; hyphens and spaces
+removed) and selects the model code that gives the longest match. For
+example, a device advertising as `NEEWER-RGB660` matches the `"RGB660"`
+entry, and `NW-20220016&123456` matches the `"20220016"` entry.
 
 Optional fields:
 
