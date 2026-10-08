@@ -53,7 +53,7 @@ class NeewerBLEConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             return False
         name_upper = name.upper()
         return (
-            "NEEWER" in name_upper
+            name_upper.startswith("NEEWER")
             or name_upper.startswith("NW-")
             or name_upper.startswith("MS150B")
         )
