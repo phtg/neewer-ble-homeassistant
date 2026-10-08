@@ -3,12 +3,39 @@
 from types import SimpleNamespace
 from unittest.mock import AsyncMock, patch
 
+import pytest
+
+from custom_components.neewer_ble.const import SUPPORTED_MODELS
 from custom_components.neewer_ble.neewer_device import NeewerLightDevice
 
 
 def _ble_device(name: str = "NEEWER-GL1 PRO") -> SimpleNamespace:
     """Create the BLEDevice surface used by the protocol class."""
     return SimpleNamespace(address="AA:BB:CC:DD:EE:FF", name=name)
+
+
+@pytest.mark.parametrize(
+    ("model_code", "advertised_name"),
+    [
+        pytest.param(code, name, id=f"{code}-{name}")
+        for code in SUPPORTED_MODELS
+        for name in (
+            f"NEEWER-{code}",
+            code,
+            *((f"NW-{code}&123456",) if code.isdigit() else ()),
+        )
+    ],
+)
+def test_detects_every_supported_model(model_code: str, advertised_name: str) -> None:
+    """Every advertised model code should retain its own profile capabilities."""
+    profile = SUPPORTED_MODELS[model_code]
+    device = NeewerLightDevice(_ble_device(advertised_name))
+
+    assert device.model_name == profile["name"]
+    assert device.supports_rgb is profile["rgb"]
+    assert device.color_temp_range == profile["cct_range"]
+    assert device.is_cct_only is profile["cct_only"]
+    assert device.light_type == profile["light_type"]
 
 
 def test_detects_gl1_pro_capabilities() -> None:
