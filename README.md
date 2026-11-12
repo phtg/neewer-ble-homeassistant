@@ -25,7 +25,7 @@ This integration supports Neewer lights that use Bluetooth for control, includin
 - RGB960 - Panel Light
 - RGB512 / RGB800 - Panel Lights
 - SL-80 - Bi-Color Panel
-- SNL-660 / SNL-530 / SNL-480 - Bi-Color Panels
+- SNL-1320 / SNL-660 / SNL-530 / SNL-480 - Bi-Color Panels
 - GL1 - Key Light
 - CB100C / CB300B - COB Lights
 - RGB1 - Light Wand
@@ -58,6 +58,7 @@ Model capabilities from [`SUPPORTED_MODELS`](custom_components/neewer_ble/const.
 | RGB960 | Yes | 3200–5600 K | Standard |
 | RGB168 | Yes | 2500–8500 K | Standard |
 | SL-80 | No | 3200–8500 K | Standard |
+| SNL-1320 | No | 3200–5600 K | Standard |
 | SNL-660 | No | 3200–5600 K | Standard |
 | SNL-530 | No | 3200–5600 K | Standard |
 | SNL-480 | No | 3200–5600 K | Standard |
