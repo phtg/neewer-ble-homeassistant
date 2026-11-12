@@ -87,6 +87,7 @@ SUPPORTED_MODELS = {
     "SNL660": {"name": "SNL-660", "rgb": False, "cct_range": (3200, 5600), "cct_only": True, "light_type": 0},
     "SNL530": {"name": "SNL-530", "rgb": False, "cct_range": (3200, 5600), "cct_only": True, "light_type": 0},
     "SNL480": {"name": "SNL-480", "rgb": False, "cct_range": (3200, 5600), "cct_only": True, "light_type": 0},
+    "SNL1320": {"name": "SNL-1320", "rgb": False, "cct_range": (3200, 5600), "cct_only": True, "light_type": 0},
 
     # GL Series (Key lights)
     # GL1 Pro advertises its product name instead of a numeric model code and
