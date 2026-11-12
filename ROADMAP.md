@@ -15,7 +15,7 @@ generations ("standard" and "Infinity").
 
 ## Current state
 
-- Version `0.4.0-beta.3`, tagged betas from `v0.3.0` → `v0.4.0-beta.3`; no stable `v0.4.0` release yet.
+- Version `0.4.0-beta.4`, tagged betas from `v0.3.0` → `v0.4.0-beta.4`; no stable `v0.4.0` release yet.
 - CI is green across the board: unit tests, Hassfest validation, and HACS validation all pass on
   `main` and the latest beta tag.
 - Two hardware models are confirmed **Tested**: GL1 Pro and PL60C. The rest of `SUPPORTED_MODELS`
